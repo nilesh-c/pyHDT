@@ -63,7 +63,7 @@ HDTDocument::HDTDocument(std::string file, bool map, bool indexed, bool progress
     throw std::runtime_error("Cannot open HDT file '" + file + "': Not Found!");
   }
 
-  StdoutProgressListener* listener = progress ? nullptr : new StdoutProgressListener();
+  StdoutProgressListener* listener = progress ? new StdoutProgressListener() : nullptr;
 
   if(!map && indexed) {
     hdt = HDTManager::loadIndexedHDT(file.c_str(), listener);
