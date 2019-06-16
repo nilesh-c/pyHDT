@@ -52,21 +52,27 @@ inline bool file_exists(const std::string &name) {
  * @param file - Path to HDT file to load
  * @param map - True maps the HDT file (faster), False loads everything in memory
  * @param indexed -  True if the HDT must be loaded with indexes, False otherwise
+ * @param progress - True to show loading progress on stdout, False otherwise
+ * @param debug - True to show debug messages from hdt-cpp, False otherwise
  */
-HDTDocument::HDTDocument(std::string file, bool map, bool indexed) {
+HDTDocument::HDTDocument(std::string file, bool map, bool indexed, bool progress, bool debug)
+    :debug(debug)
+ {
   hdt_file = file;
   if (!file_exists(file)) {
     throw std::runtime_error("Cannot open HDT file '" + file + "': Not Found!");
   }
 
+  StdoutProgressListener* listener = progress ? nullptr : new StdoutProgressListener();
+
   if(!map && indexed) {
-    hdt = HDTManager::loadIndexedHDT(file.c_str());
+    hdt = HDTManager::loadIndexedHDT(file.c_str(), listener);
   } else if(!map && !indexed) {
-    hdt = HDTManager::loadHDT(file.c_str());
+    hdt = HDTManager::loadHDT(file.c_str(), listener);
   } else if(map && indexed){
-    hdt = HDTManager::mapIndexedHDT(file.c_str());
+    hdt = HDTManager::mapIndexedHDT(file.c_str(), listener);
   } else {
-    hdt = HDTManager::mapHDT(file.c_str());
+    hdt = HDTManager::mapHDT(file.c_str(), listener);
   }
   processor = new QueryProcessor(hdt);
 }
@@ -288,6 +294,19 @@ unsigned int HDTDocument::convertTerm(std::string term, IdentifierPosition pos) 
  * @return A JoinIterator* used to evaluated the join.
  */
 JoinIterator * HDTDocument::searchJoin(std::vector<triple> patterns) {
+  std::streambuf *cout_original = nullptr;
+  std::streambuf *cerr_original = nullptr;
+  std::ofstream *null_out = nullptr;
+
+  if(!debug) {
+    cout_original = std::cout.rdbuf();
+    cerr_original = std::cerr.rdbuf();
+
+    null_out =  new std::ofstream("/dev/null");
+    std::cout.rdbuf(null_out->rdbuf()); // redirect 'cout' to /dev/null
+    std::cerr.rdbuf(null_out->rdbuf()); // redirect 'cerr' to /dev/null
+  }
+
   set<string> vars {};
   vector<TripleString> joinPatterns {};
   std::string subj, pred, obj;
@@ -311,5 +330,12 @@ JoinIterator * HDTDocument::searchJoin(std::vector<triple> patterns) {
   }
 
   VarBindingString *iterator = processor->searchJoin(joinPatterns, vars);
+
+  if(!debug) {
+    std::cout.rdbuf(cout_original);
+    std::cerr.rdbuf(cerr_original);
+    null_out->close();
+  }
+
   return new JoinIterator(iterator);
 }

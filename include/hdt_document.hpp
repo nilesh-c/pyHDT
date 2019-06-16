@@ -31,8 +31,9 @@ class HDTDocument {
 private:
   std::string hdt_file;
   hdt::HDT *hdt;
+  bool debug;
   hdt::QueryProcessor *processor;
-  HDTDocument(std::string file, bool map, bool indexed);
+  HDTDocument(std::string file, bool map, bool indexed, bool progress, bool debug);
 
 public:
   /*!
@@ -87,9 +88,11 @@ public:
    * @param file - Path to the HDT file
    * @param map - True maps the HDT file (faster), False loads everything in memory
    * @param indexed -  True if the HDT must be loaded with indexes, False otherwise
+   * @param progress - True to show progress on stdout, False otherwise
+   * @param debug - True to show cout debug messages from hdt-cpp, False otherwise
    */
-  static HDTDocument create(std::string file, bool map, bool indexed) {
-    return HDTDocument(file, map, indexed);
+  static HDTDocument create(std::string file, bool map, bool indexed, bool progress, bool debug) {
+    return HDTDocument(file, map, indexed, progress, debug);
   }
 
   /*!
